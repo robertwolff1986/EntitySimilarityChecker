@@ -2,6 +2,7 @@ package com.wolffr.SimilarityChecker.controller;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,7 @@ import com.wolffr.SimilarityChecker.db.IPhysicianManager;
 import com.wolffr.SimilarityChecker.entity.LevenshteinGroup;
 import com.wolffr.SimilarityChecker.entity.Physician;
 import com.wolffr.SimilarityChecker.util.LevenstheinDistanceUtil;
+import com.wolffr.SimilarityChecker.util.Preprocessor;
 
 @Component
 @ComponentScan({ "com.wolffr.SimilarityChecker.db" })
@@ -22,11 +24,14 @@ public class CheckSimilarityController {
 	@Autowired
 	private IPhysicianManager physicianManager;
 
+	@Autowired
+	private Preprocessor preprocessor;
+	
 	private List<Physician> allPhyscians;
-	private List<Physician> allocatedPhysicians = new ArrayList<>();
+	private List<Physician> preprocessedPhysicians;
 	private List<LevenshteinGroup<Physician>> levenshteinGroups = new ArrayList<>();
-	private Integer counter=1;
-	private List<Physician> matchedPhysicians=new ArrayList<>();
+	private Integer counter = 1;
+	private List<Physician> matchedPhysicians = new ArrayList<>();
 
 	public CheckSimilarityController() {
 
@@ -34,16 +39,21 @@ public class CheckSimilarityController {
 
 	public void checkSimilarity() {
 		allPhyscians = physicianManager.findAll();
+		createPreprocessedPhysician();
 		LOGGER.info(String.format("Loaded %s physicians", allPhyscians.size()));
 		process();
 		persistLevenShteinGroups();
 	}
 
+	private void createPreprocessedPhysician() {
+		preprocessedPhysicians=allPhyscians.stream().map(preprocessor::preprocess).collect(Collectors.toList());
+	}
+
 	private void persistLevenShteinGroups() {
 		levenshteinGroups.parallelStream().forEach(this::persistGroup);
 	}
-	
-	private void persistGroup(LevenshteinGroup<Physician> levenshteinGroup ) {
+
+	private void persistGroup(LevenshteinGroup<Physician> levenshteinGroup) {
 		setGroupId(levenshteinGroup);
 		physicianManager.save(levenshteinGroup.getRoot());
 		levenshteinGroup.getMatchList().stream().forEach(physicianManager::save);
@@ -60,15 +70,16 @@ public class CheckSimilarityController {
 
 	private void checkSimilarity(Physician physician) {
 		LevenstheinDistanceUtil util = new LevenstheinDistanceUtil();
-		LevenshteinGroup<Physician> group = new LevenshteinGroup<Physician>(counter++,physician);
-		allPhyscians.parallelStream()
-					.filter(currentPhysician->!physician.equals(currentPhysician))
-					.filter(currentPhysician -> currentPhysician.getStreet()!=null)
-					.filter(currentPhysician->!matchedPhysicians.contains(currentPhysician))
-					.filter(currentPhysician->util.getLevenshteinDistance(physician.getName(), currentPhysician.getName())<5)
-					.filter(currentPhysician->util.getLevenshteinDistance(physician.getStreet(), currentPhysician.getStreet())<15)
-					.peek(matchedPhysicians::add)
-					.forEach(group::addMatch);
+		LevenshteinGroup<Physician> group = new LevenshteinGroup<Physician>(counter++, physician);
+		
+		allPhyscians.stream().filter(currentPhysician -> !physician.equals(currentPhysician))
+				.filter(currentPhysician -> currentPhysician.getStreet() != null)
+				.filter(currentPhysician -> !matchedPhysicians.contains(currentPhysician))
+				.filter(currentPhysician -> util.getLevenshteinDistance(physician.getName(),
+						currentPhysician.getName()) < 5)
+				.filter(currentPhysician -> util.getLevenshteinDistance(physician.getStreet(),
+						currentPhysician.getStreet()) < 5)
+				.peek(matchedPhysicians::add).forEach(group::addMatch);
 		levenshteinGroups.add(group);
 	}
 

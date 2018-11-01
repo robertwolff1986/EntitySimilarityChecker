@@ -11,7 +11,7 @@ import com.wolffr.SimilarityChecker.controller.CheckSimilarityController;
 import com.wolffr.SimilarityChecker.db.IPhysicianManager;
 
 @SpringBootApplication
-@ComponentScan({"com.wolffr.SimilarityChecker.controller"})
+@ComponentScan({"com.wolffr.SimilarityChecker.controller","com.wolffr.SimilarityChecker.util"})
 @EnableJpaRepositories("com.wolffr.SimilarityChecker.db")
 public class SimilarityCheckerApplication {
 	
