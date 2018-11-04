@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import com.wolffr.SimilarityChecker.controller.CheckSimilarityController;
 import com.wolffr.SimilarityChecker.db.IPhysicianManager;
 import com.wolffr.SimilarityChecker.entity.CheckConfiguration;
+import com.wolffr.SimilarityChecker.entity.Physician;
 
 @SpringBootApplication
 @ComponentScan({"com.wolffr.SimilarityChecker.controller","com.wolffr.SimilarityChecker.util"})
@@ -19,7 +20,7 @@ import com.wolffr.SimilarityChecker.entity.CheckConfiguration;
 public class SimilarityCheckerApplication {
 	
 	@Autowired
-	CheckSimilarityController controller;
+	private IPhysicianManager physicianManager;
 
 	public static void main(String[] args) {
 		SpringApplication.run(SimilarityCheckerApplication.class, args);
@@ -32,6 +33,7 @@ public class SimilarityCheckerApplication {
 		firstCheckConfiguration.setSwitchWords(true);
 		CheckConfiguration secondCheckConfiguration = new CheckConfiguration("street", 8);
 		CheckConfiguration thirdCheckConfiguration = new CheckConfiguration("zip", 6);
+		CheckSimilarityController<Physician,Long> controller = new CheckSimilarityController<Physician,Long>(physicianManager);
 		controller.checkSimilarity(Arrays.asList(firstCheckConfiguration,secondCheckConfiguration,thirdCheckConfiguration));
 		return false;
 	}

@@ -1,5 +1,7 @@
 package com.wolffr.SimilarityChecker.util;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.AbstractMap;
@@ -7,13 +9,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 
-import com.wolffr.SimilarityChecker.entity.Physician;
+import com.wolffr.SimilarityChecker.entity.CheckConfiguration;
 
 /**
  * Util class that can be used to preprocess String prior to checkin similarity. 
@@ -21,7 +20,7 @@ import com.wolffr.SimilarityChecker.entity.Physician;
  * @author wolffr
  *
  */
-public class Preprocessor {
+public class Preprocessor<T> {
 	final static Logger LOGGER = LoggerFactory.getLogger(Preprocessor.class);
 
 	private static List<String> stringsToRemove;
@@ -67,18 +66,38 @@ public class Preprocessor {
 
 	/**
 	 * Preprocess a given Entity using removal and replacement rules that are stored in 'Preprocessing.config'.
-	 * @param physician: Entity that should be preprocessed
+	 * @param checkConfigurations 
+	 * @param entity: Entity that should be preprocessed
+	 * @param checkConfigurations: Checkconfigurations that will be used to preprocess the correct fields
 	 * @return preprocessed entity
 	 */
-	public Physician preprocess(Physician physician) {
-		Physician preprocessedPhysician = new Physician(physician);
-		stringsToRemove.stream().forEach(stringToRemove -> preprocessedPhysician.setName(preprocessedPhysician.getName().toLowerCase().replace(stringToRemove, "").trim()));
-		stringsToRemove.stream().forEach(stringToRemove -> preprocessedPhysician.setStreet(preprocessedPhysician.getStreet()!=null?preprocessedPhysician.getStreet().toLowerCase().replace(stringToRemove, "").trim():""));
-		
-		if(physician.getStreet()!=null) {
-			stringsToReplace.entrySet().stream().forEach(entryToReplace -> preprocessedPhysician.setName(preprocessedPhysician.getName().toLowerCase().replace(entryToReplace.getKey(), entryToReplace.getValue())));
-			stringsToReplace.entrySet().stream().forEach(entryToReplace -> preprocessedPhysician.setStreet(preprocessedPhysician.getStreet().toLowerCase().replace(entryToReplace.getKey(), entryToReplace.getValue())));
+	public T preprocess(T entity, List<CheckConfiguration> checkConfigurations) {
+
+		Class<?> preprocessedEntityClass = entity.getClass();
+		Constructor<?> constructor = preprocessedEntityClass.getConstructors()[0];
+		try {
+			@SuppressWarnings("unchecked")
+			T preprocessedEntity = (T) constructor.newInstance(entity);
+
+			for (CheckConfiguration configuration : checkConfigurations) {
+				Field field = preprocessedEntity.getClass().getDeclaredField(configuration.getFieldToCheck());
+				field.setAccessible(true);
+				Object value = field.get(preprocessedEntity);
+				if (value != null) {
+					String newValue = value.toString();
+					for (String stringToRemove : stringsToRemove) {
+						newValue = newValue.toLowerCase().replace(stringToRemove, "").trim();
+					}
+					for (Map.Entry<String, String> entryToReplace : stringsToReplace.entrySet()) {
+						newValue = newValue.toLowerCase().replace(entryToReplace.getKey(), entryToReplace.getValue());
+					}
+					field.set(preprocessedEntity, newValue);
+				}
+			}
+			return preprocessedEntity;
+		} catch (Exception e) {
+			LOGGER.error("Couldn not preprocess entity: " + entity, e);
 		}
-		return preprocessedPhysician;
+		return null;
 	}
 }

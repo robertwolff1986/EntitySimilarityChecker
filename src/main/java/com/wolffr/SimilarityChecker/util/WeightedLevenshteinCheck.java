@@ -11,29 +11,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.wolffr.SimilarityChecker.entity.CheckConfiguration;
-import com.wolffr.SimilarityChecker.entity.Physician;
 
-public class WeightedLevenshteinCheck {
+public class WeightedLevenshteinCheck<T> {
 	final static Logger LOGGER = LoggerFactory.getLogger(WeightedLevenshteinCheck.class);
 
 	private List<CheckConfiguration> checkConfigurations;
-	private Preprocessor preprocessor;
+	private Preprocessor<T> preprocessor;
 
 	public WeightedLevenshteinCheck(List<CheckConfiguration> checkConfigurations) {
 		this.checkConfigurations = checkConfigurations;
-		preprocessor=new Preprocessor();
+		preprocessor=new Preprocessor<T>();
 	}
 
-	public Double calculateSimilarity(Physician currentPhysician, Physician possibleMatch) {
+	public Double calculateSimilarity(T currentEntity, T possibleMatch) {
 		Map<String, Double> fieldAndScoreMap = new HashMap<>();
 		for (CheckConfiguration checkConfiguration : checkConfigurations) {
 			String currentField;
 			String possibleMatchField;
 			try {
-				currentField = getField(preprocessor.preprocess(currentPhysician), checkConfiguration.getFieldToCheck());
-				possibleMatchField = getField(preprocessor.preprocess(possibleMatch), checkConfiguration.getFieldToCheck());
+				currentField = getField(preprocessor.preprocess(currentEntity,checkConfigurations), checkConfiguration.getFieldToCheck());
+				possibleMatchField = getField(preprocessor.preprocess(possibleMatch,checkConfigurations), checkConfiguration.getFieldToCheck());
 			} catch (Exception e) {
-				LOGGER.error(String.format("Could not return field: %s from entities; %s , %s", checkConfiguration.getFieldToCheck(), currentPhysician, possibleMatch));
+				LOGGER.error(String.format("Could not return field: %s from entities; %s , %s", checkConfiguration.getFieldToCheck(), currentEntity, possibleMatch));
 				break;
 			}
 			
@@ -50,11 +49,6 @@ public class WeightedLevenshteinCheck {
 				}
 			}
 		}
-//		LOGGER.info("------------------------------------------");
-//		LOGGER.info(""+currentPhysician);
-//		LOGGER.info(""+possibleMatch);
-//		LOGGER.info(""+fieldAndScoreMap + ": " + getWeightedSimilarity(fieldAndScoreMap));
-//		LOGGER.info(System.lineSeparator());
 		return getWeightedSimilarity(fieldAndScoreMap);
 
 	}
@@ -98,11 +92,11 @@ public class WeightedLevenshteinCheck {
 		return currentFieldWords.stream().noneMatch(currentFieldWord -> !possibleMatchFieldWords.contains(currentFieldWord));
 	}
 
-	private String getField(Physician currentPhysician, String fieldToCheck) throws Exception {
-		Class<?> clazz = Class.forName(currentPhysician.getClass().getName());
+	private String getField(T currentEntity, String fieldToCheck) throws Exception {
+		Class<?> clazz = Class.forName(currentEntity.getClass().getName());
 		Field field = clazz.getDeclaredField(fieldToCheck);
 		field.setAccessible(true);
-		return field.get(currentPhysician)!=null?field.get(currentPhysician).toString():"";
+		return field.get(currentEntity)!=null?field.get(currentEntity).toString():"";
 	}
 
 	private Double calcSimiliarity(int length, Integer distance) {

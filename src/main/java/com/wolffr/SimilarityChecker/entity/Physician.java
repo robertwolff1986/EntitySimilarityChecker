@@ -7,7 +7,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
 @Entity
-public class Physician {
+public class Physician implements DBEntity{
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
@@ -25,15 +25,15 @@ public class Physician {
 	}
 
 	public Physician(Physician physician) {
-		this.physicianId=physician.getPhysicianId();
-		this.name=physician.getName().trim();
-		if(physician.getStreet()!=null)
-			this.street=physician.getStreet().trim();
-		if(physician.getZip()!=null)
-			this.zip=physician.getZip().trim();
-		if(physician.getCity()!=null)
-			this.city=physician.getCity().trim();
-		this.degree=physician.getDegree();
+		this.physicianId = physician.getPhysicianId();
+		this.name = physician.getName().trim();
+		if (physician.getStreet() != null)
+			this.street = physician.getStreet().trim();
+		if (physician.getZip() != null)
+			this.zip = physician.getZip().trim();
+		if (physician.getCity() != null)
+			this.city = physician.getCity().trim();
+		this.degree = physician.getDegree();
 	}
 
 	public Long getPhysicianId() {
@@ -59,7 +59,7 @@ public class Physician {
 	public String getCity() {
 		return city;
 	}
-	
+
 	public Integer getMergeGroup() {
 		return mergeGroup;
 	}
@@ -122,6 +122,4 @@ public class Physician {
 		return true;
 	}
 
-
-	
 }
