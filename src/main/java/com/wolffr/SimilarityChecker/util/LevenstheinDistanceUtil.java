@@ -8,9 +8,9 @@ import org.slf4j.LoggerFactory;
 public class LevenstheinDistanceUtil {
 	final static Logger LOGGER = LoggerFactory.getLogger(LevenstheinDistanceUtil.class);
 	
-	public Integer getLevenshteinDistance(String source,String target) {
+	public static Integer getLevenshteinDistance(String source,String target) {
 		Integer distance= new LevenshteinDistance().apply(source, target);
-		LOGGER.info(source+ " <-> " + target + " =" + distance);
+		LOGGER.debug(source+ " <-> " + target + " =" + distance);
 		return distance;
 	}
 

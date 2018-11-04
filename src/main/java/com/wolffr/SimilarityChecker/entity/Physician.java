@@ -26,10 +26,13 @@ public class Physician {
 
 	public Physician(Physician physician) {
 		this.physicianId=physician.getPhysicianId();
-		this.name=physician.getName();
-		this.street=physician.getStreet();
-		this.zip=physician.getZip();
-		this.city=physician.getCity();
+		this.name=physician.getName().trim();
+		if(physician.getStreet()!=null)
+			this.street=physician.getStreet().trim();
+		if(physician.getZip()!=null)
+			this.zip=physician.getZip().trim();
+		if(physician.getCity()!=null)
+			this.city=physician.getCity().trim();
 		this.degree=physician.getDegree();
 	}
 

@@ -2,7 +2,9 @@ package com.wolffr.SimilarityChecker.util;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.AbstractMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -13,30 +15,59 @@ import org.springframework.stereotype.Service;
 
 import com.wolffr.SimilarityChecker.entity.Physician;
 
-@Service 
 public class Preprocessor {
 	final static Logger LOGGER = LoggerFactory.getLogger(Preprocessor.class);
-	
-	private List<String> stringsToRemove;
 
-	@PostConstruct
-	public void init() {
+	private static List<String> stringsToRemove;
+	private static Map<String, String> stringsToReplace;
+
+	public Preprocessor() {
+		if (stringsToRemove == null)
+			initRemovalList();
+		if (stringsToReplace == null)
+			initReplaceList();
+	}
+
+	public void initRemovalList() {
 		try {
-			stringsToRemove= Files.lines(Paths.get(this.getClass().getResource("/Preprocessing.config").getPath()))
-					.filter(line->line.contains("RemovePattern=")).map(line -> line.substring(line.indexOf("RemovePattern=")+"RemovePattern=".length()))
-			.collect(Collectors.toList());
-			LOGGER.info(String.format("Found %s stringsToRemove",stringsToRemove.size()));
+			stringsToRemove = Files.lines(Paths.get(this.getClass().getResource("/Preprocessing.config").getPath()))
+					.filter(line -> line.contains("RemovePattern="))
+					.map(line -> line.substring(line.indexOf("RemovePattern=") + "RemovePattern=".length()))
+					.collect(Collectors.toList());
+			LOGGER.info(String.format("Found %s stringsToRemove", stringsToRemove.size()));
 		} catch (Exception e) {
-			LOGGER.error("Could not read Preprocessing config",e);
+			LOGGER.error("Could not read Preprocessing config", e);
 		}
 	}
-	
+
+	public void initReplaceList() {
+		try {
+			stringsToReplace = Files.lines(Paths.get(this.getClass().getResource("/Preprocessing.config").getPath()))
+					.filter(line -> line.contains("ReplacePattern=")).map(line -> {
+						String patterToReplace = line.substring(
+								line.indexOf("ReplacePattern=") + "ReplacePattern=".length(), line.indexOf("->"));
+						String patternToReplaceWith = line.substring(line.indexOf("->") + "->".length());
+						Map.Entry<String, String> entry = new AbstractMap.SimpleEntry<>(
+								patterToReplace.substring(patterToReplace.indexOf("'") + 1,
+										patterToReplace.lastIndexOf("'")),
+								patternToReplaceWith.substring(patternToReplaceWith.indexOf("'") + 1,
+										patternToReplaceWith.lastIndexOf("'")));
+						return entry;
+					}).collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+			LOGGER.info(String.format("Found %s stringsToRemove", stringsToRemove.size()));
+		} catch (Exception e) {
+			LOGGER.error("Could not read Preprocessing config", e);
+		}
+	}
+
 	public Physician preprocess(Physician physician) {
 		Physician preprocessedPhysician = new Physician(physician);
-		stringsToRemove.stream().forEach(stringToRemove -> preprocessedPhysician.setName(physician.getName().replace(stringToRemove, "")));
-		stringsToRemove.stream().forEach(stringToRemove -> preprocessedPhysician.setStreet(physician.getStreet()!=null?physician.getStreet().replace(stringToRemove, ""):""));
+		stringsToRemove.stream().forEach(stringToRemove -> preprocessedPhysician.setName(preprocessedPhysician.getName().toLowerCase().replace(stringToRemove, "").trim()));
+		stringsToRemove.stream().forEach(stringToRemove -> preprocessedPhysician.setStreet(preprocessedPhysician.getStreet()!=null?preprocessedPhysician.getStreet().toLowerCase().replace(stringToRemove, "").trim():""));
+		if(physician.getStreet()!=null) {
+			stringsToReplace.entrySet().stream().forEach(entryToReplace -> preprocessedPhysician.setName(preprocessedPhysician.getName().toLowerCase().replace(entryToReplace.getKey(), entryToReplace.getValue())));
+			stringsToReplace.entrySet().stream().forEach(entryToReplace -> preprocessedPhysician.setStreet(preprocessedPhysician.getStreet().toLowerCase().replace(entryToReplace.getKey(), entryToReplace.getValue())));
+		}
 		return preprocessedPhysician;
 	}
-	
-
 }

@@ -11,11 +11,17 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Component;
 
 import com.wolffr.SimilarityChecker.db.IPhysicianManager;
+import com.wolffr.SimilarityChecker.entity.CheckConfiguration;
 import com.wolffr.SimilarityChecker.entity.LevenshteinGroup;
 import com.wolffr.SimilarityChecker.entity.Physician;
 import com.wolffr.SimilarityChecker.util.LevenstheinDistanceUtil;
 import com.wolffr.SimilarityChecker.util.Preprocessor;
-
+import com.wolffr.SimilarityChecker.util.WeightedLevenshteinCheck;
+/**
+ * Coordinates similarity checks
+ * @author wolffr
+ *
+ */
 @Component
 @ComponentScan({ "com.wolffr.SimilarityChecker.db" })
 public class CheckSimilarityController {
@@ -24,11 +30,12 @@ public class CheckSimilarityController {
 	@Autowired
 	private IPhysicianManager physicianManager;
 
-	@Autowired
-	private Preprocessor preprocessor;
 	
+	/**
+	 * Contains all loaded entitied
+	 */
 	private List<Physician> allPhyscians;
-	private List<Physician> preprocessedPhysicians;
+	private List<CheckConfiguration> checkConfigurations;
 	private List<LevenshteinGroup<Physician>> levenshteinGroups = new ArrayList<>();
 	private Integer counter = 1;
 	private List<Physician> matchedPhysicians = new ArrayList<>();
@@ -37,50 +44,53 @@ public class CheckSimilarityController {
 
 	}
 
-	public void checkSimilarity() {
-		allPhyscians = physicianManager.findAll();
-		createPreprocessedPhysician();
-		LOGGER.info(String.format("Loaded %s physicians", allPhyscians.size()));
+	public void checkSimilarity(List<CheckConfiguration> checkConfigurations) {
+		this.checkConfigurations=checkConfigurations;
 		process();
-		persistLevenShteinGroups();
-	}
-
-	private void createPreprocessedPhysician() {
-		preprocessedPhysicians=allPhyscians.stream().map(preprocessor::preprocess).collect(Collectors.toList());
-	}
-
-	private void persistLevenShteinGroups() {
-		levenshteinGroups.parallelStream().forEach(this::persistGroup);
-	}
-
-	private void persistGroup(LevenshteinGroup<Physician> levenshteinGroup) {
-		setGroupId(levenshteinGroup);
-		physicianManager.save(levenshteinGroup.getRoot());
-		levenshteinGroup.getMatchList().stream().forEach(physicianManager::save);
-	}
-
-	private void setGroupId(LevenshteinGroup<Physician> levenshteinGroup) {
-		levenshteinGroup.getRoot().setMergeGroup(levenshteinGroup.getId());
-		levenshteinGroup.getMatchList().stream().forEach(entity -> entity.setMergeGroup(levenshteinGroup.getId()));
 	}
 
 	private void process() {
+		loadSourceEntities();
 		allPhyscians.stream().forEach(this::checkSimilarity);
+		storeInDatabase();
 	}
 
-	private void checkSimilarity(Physician physician) {
-		LevenstheinDistanceUtil util = new LevenstheinDistanceUtil();
-		LevenshteinGroup<Physician> group = new LevenshteinGroup<Physician>(counter++, physician);
-		
-		allPhyscians.stream().filter(currentPhysician -> !physician.equals(currentPhysician))
-				.filter(currentPhysician -> currentPhysician.getStreet() != null)
-				.filter(currentPhysician -> !matchedPhysicians.contains(currentPhysician))
-				.filter(currentPhysician -> util.getLevenshteinDistance(physician.getName(),
-						currentPhysician.getName()) < 5)
-				.filter(currentPhysician -> util.getLevenshteinDistance(physician.getStreet(),
-						currentPhysician.getStreet()) < 5)
-				.peek(matchedPhysicians::add).forEach(group::addMatch);
-		levenshteinGroups.add(group);
+	private void loadSourceEntities() {
+		allPhyscians=physicianManager.findAll();
+		LOGGER.info(String.format("Loaded %s physicians", allPhyscians.size()));
 	}
+
+	private void checkSimilarity(Physician currentPhysician) {
+		if(matchedPhysicians.contains(currentPhysician))
+			return;
+		
+		LevenshteinGroup<Physician> levenshteinGroup = new LevenshteinGroup<Physician>(counter++, currentPhysician);
+		matchedPhysicians.add(currentPhysician);
+		for(Physician possibleMatch:allPhyscians) {
+			if(!matchedPhysicians.contains(possibleMatch))
+			{
+				WeightedLevenshteinCheck weightedLevenshteinCheck = new WeightedLevenshteinCheck(checkConfigurations);
+				Double result = weightedLevenshteinCheck.calculateSimilarity(currentPhysician,possibleMatch);
+				if(result>80.0)
+				{
+					levenshteinGroup.addMatch(possibleMatch);
+					matchedPhysicians.add(possibleMatch);
+				}
+			}
+		}
+		levenshteinGroups.add(levenshteinGroup);
+		LOGGER.info(String.format("%s groups found, %s entires left to match", counter,(allPhyscians.size()-matchedPhysicians.size())));
+	}
+	
+
+	private void storeInDatabase() {
+		for(LevenshteinGroup<Physician> group:levenshteinGroups) {
+			group.getRoot().setMergeGroup(group.getId());
+			group.getMatchList().stream().forEach(match -> match.setMergeGroup(group.getId()));
+			group.getMatchList().add(group.getRoot());
+			group.getMatchList().stream().forEach(physicianManager::save);
+		}
+	}
+
 
 }
