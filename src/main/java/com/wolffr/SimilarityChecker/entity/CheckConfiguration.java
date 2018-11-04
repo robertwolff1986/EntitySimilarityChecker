@@ -1,7 +1,7 @@
 package com.wolffr.SimilarityChecker.entity;
 
 public class CheckConfiguration {
-
+	
 	private String fieldToCheck;
 	private Integer weight;
 	private boolean countSingleWordEqualsAsSimilar;
