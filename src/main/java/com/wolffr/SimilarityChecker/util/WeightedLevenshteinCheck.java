@@ -20,7 +20,7 @@ public class WeightedLevenshteinCheck<T> {
 
 	public WeightedLevenshteinCheck(List<CheckConfiguration> checkConfigurations) {
 		this.checkConfigurations = checkConfigurations;
-		preprocessor=new Preprocessor<T>();
+		preprocessor=new Preprocessor<>();
 	}
 
 	public Double calculateSimilarity(T currentEntity, T possibleMatch) {
@@ -59,7 +59,7 @@ public class WeightedLevenshteinCheck<T> {
 		
 		List<String> currentFieldPermutationsList = PermutationUtil.generateWordPermutations(currentField);
 		Integer optimalDistance=currentFieldPermutationsList.stream().map(currentFieldPermutation -> LevenstheinDistanceUtil.getLevenshteinDistance(currentFieldPermutation, possibleMatchField)).mapToInt(e->e).min().getAsInt();
-		LOGGER.info("PermutationListSize: " + currentFieldPermutationsList.size()+ " Optimal Distance: " + optimalDistance);
+		LOGGER.debug("PermutationListSize: " + currentFieldPermutationsList.size()+ " Optimal Distance: " + optimalDistance);
 		return optimalDistance;
 		
 	}

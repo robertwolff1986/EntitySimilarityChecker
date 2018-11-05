@@ -3,6 +3,7 @@ package com.wolffr.SimilarityChecker.util;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.AbstractMap;
 import java.util.List;
@@ -35,7 +36,8 @@ public class Preprocessor<T> {
 
 	private void initRemovalList() {
 		try {
-			stringsToRemove = Files.lines(Paths.get(this.getClass().getResource("/Preprocessing.config").getPath()))
+			ClassLoader classloader = Thread.currentThread().getContextClassLoader();
+			stringsToRemove = Files.lines(Paths.get(classloader.getResource("Preprocessing.config").toURI()))
 								   .filter(line -> line.contains("RemovePattern="))
 								   .map(line -> line.substring(line.indexOf("RemovePattern=") + "RemovePattern=".length()))
 								   .collect(Collectors.toList());
@@ -48,7 +50,8 @@ public class Preprocessor<T> {
 
 	private void initReplaceList() {
 		try {
-			stringsToReplace = Files.lines(Paths.get(this.getClass().getResource("/Preprocessing.config").getPath()))
+			ClassLoader classloader = Thread.currentThread().getContextClassLoader();
+			stringsToReplace = Files.lines(Paths.get(classloader.getResource("Preprocessing.config").toURI()))
 									.filter(line -> line.contains("ReplacePattern="))
 									.map(line -> {
 													String patterToReplace = line.substring(line.indexOf("ReplacePattern=") + "ReplacePattern=".length(), line.indexOf("->"));
