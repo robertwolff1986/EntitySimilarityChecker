@@ -1,6 +1,7 @@
 package com.wolffr.SimilarityChecker.controller;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 import com.wolffr.SimilarityChecker.entity.CheckConfiguration;
 import com.wolffr.SimilarityChecker.entity.DBEntity;
 import com.wolffr.SimilarityChecker.entity.LevenshteinGroup;
+import com.wolffr.SimilarityChecker.entity.Physician;
 import com.wolffr.SimilarityChecker.util.WeightedLevenshteinCheck;
 /**
  * Coordinates similarity checks
@@ -46,7 +48,15 @@ public class CheckSimilarityController<T extends DBEntity,ID> {
 
 	private void process() {
 		loadSourceEntities();
-		allEntities.stream().forEach(this::checkSimilarity);
+		for(T entity : allEntities) {
+			if(!matchedEntities.contains(entity)) {
+			List<T> matchList = getMatches(entity);
+			LevenshteinGroup<T> group = new LevenshteinGroup<T>(counter++, entity);
+			matchList.stream().distinct().peek(matchedEntities::add).forEach(group::addMatch);
+			levenshteinGroups.add(group);
+			LOGGER.info(String.format("%s groups found, %s entires left to match", counter,(allEntities.size()-matchedEntities.size())));
+			}
+		}
 		storeInDatabase();
 	}
 
@@ -55,28 +65,33 @@ public class CheckSimilarityController<T extends DBEntity,ID> {
 		LOGGER.info(String.format("Loaded %s entities", allEntities.size()));
 	}
 
-	private void checkSimilarity(T currentEntitiy) {
-		if(matchedEntities.contains(currentEntitiy))
-			return;
+	private List<T> getMatches(T currentEntity) {
 		
-		LevenshteinGroup<T> levenshteinGroup = new LevenshteinGroup<T>(counter++, currentEntitiy);
-		matchedEntities.add(currentEntitiy);
+		if(matchedEntities.contains(currentEntity))
+			return new ArrayList<>();
+		
+		matchedEntities.add(currentEntity);
+		List<T> resultList=new ArrayList<>();
 		for(T possibleMatch:allEntities) {
 			if(!matchedEntities.contains(possibleMatch))
 			{
 				WeightedLevenshteinCheck<T> weightedLevenshteinCheck = new WeightedLevenshteinCheck<T>(checkConfigurations);
-				Double result = weightedLevenshteinCheck.calculateSimilarity(currentEntitiy,possibleMatch);
-				if(result>80.0)
+				Double result = weightedLevenshteinCheck.calculateSimilarity(currentEntity,possibleMatch);
+				if(result>85.0)
 				{
-					levenshteinGroup.addMatch(possibleMatch);
-					matchedEntities.add(possibleMatch);
+					resultList.add(possibleMatch);
 				}
 			}
 		}
-		levenshteinGroups.add(levenshteinGroup);
-		LOGGER.info(String.format("%s groups found, %s entires left to match", counter,(allEntities.size()-matchedEntities.size())));
+		List<T> secondResultList = new ArrayList<>();
+		for(T entity:resultList)
+		{
+			secondResultList.addAll(getMatches(entity));
+		}
+		resultList.addAll(secondResultList);
+		return resultList;
+		
 	}
-	
 
 	private void storeInDatabase() {
 		for(LevenshteinGroup<T> group:levenshteinGroups) {

@@ -37,7 +37,7 @@ public class WeightedLevenshteinCheck<T> {
 			}
 			
 			if (StringUtils.isAnyEmpty(currentField, possibleMatchField)) {
-				fieldAndScoreMap.put(checkConfiguration.getFieldToCheck(), 100.0);
+				fieldAndScoreMap.put(checkConfiguration.getFieldToCheck(), 70.0);
 			} else {
 				boolean allWordsSimilar = checkAllWordsSimilar(currentField, possibleMatchField, checkConfiguration);
 				if (allWordsSimilar)
