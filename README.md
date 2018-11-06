@@ -21,7 +21,9 @@ There are also a few extra rounds to find similar entities that are not that obv
 1. If 2 columns are compared it will be checked if the single words in one column (splitted by ' ') are entirely contained in the other. If so, both columns will be treated as 100% similar.
 
 Example: 
+
 entity1:name=Robert Wolff
+
 entity2:name=Wolff
 
 This will be treated as a 100% match looking at the name column.
@@ -29,7 +31,9 @@ This will be treated as a 100% match looking at the name column.
 2. If 2 columns are compared, the levenshtein distance of all permutations of all words in the column (splitted by ' ') will be calculated and the optimal distance will be used to rate the similarity.
 
 Example: 
+
 entity1:name=Robert Wolff
+
 entity2:name=Wolff Robert
 
 The first entity will eventually be permutated to 'Wolff Robert' too, resulting in a 100% match.
@@ -37,8 +41,11 @@ The first entity will eventually be permutated to 'Wolff Robert' too, resulting 
 3. Matches will be matched again recursively to match entities that woudnt have matched with the original entity.
 
 Example: 
+
 entity1:name=Robert
+
 entity2:name=Robert Wolff
+
 entity3:name=Wolff
 
 Entity 1 is contained in entity 2, resulting in a match considerung the containing check mentioned at 1. 
