@@ -6,6 +6,12 @@ This tool will compare all entities based on weighted Levenshtein distance on mu
 
 Currently the database table containig the entities required a separate column 'merge_group'. This column will be used to group similiar entities.
 
+Sample input:
+
+
+Sample output:
+
+
 ## Getting Started
 
 Current setup is a maven project that can be imported in any IDE that supports maven projects.
@@ -20,7 +26,7 @@ Download or clone repository.
 
 Import in Eclipse using 'import maven project'.
 
-Setup database with at least one table that countains the entities that should be compared.
+Setup database with at least one table that countains the entities that should be compared(use db.sql in resources).
 
 ## License
 
