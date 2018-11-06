@@ -7,9 +7,10 @@ This tool will compare all entities based on weighted Levenshtein distance on mu
 Currently the database table containig the entities required a separate column 'merge_group'. This column will be used to group similiar entities.
 
 Sample input:
-
+![alt text](https://github.com/robertwolff1986/EntitySimilarityChecker/blob/master/images/source.png "input")
 
 Sample output:
+![alt text](https://github.com/robertwolff1986/EntitySimilarityChecker/blob/master/images/target.png "ouput")
 
 
 ## Getting Started
